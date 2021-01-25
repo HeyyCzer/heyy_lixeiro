@@ -10,6 +10,9 @@ function heyyczer.checkPayment()
     local user_id = vRP.getUserId(source)
 	
 	if user_id then
-		vRP.giveMoney(user_id, math.random(cfg.minMoneyValue, cfg.maxMoneyValue))
+		local money = math.random(cfg.minMoneyValue, cfg.maxMoneyValue)
+		
+		vRP.giveMoney(user_id, money)
+		TriggerClientEvent("Notify", source, "sucesso", "Você recebeu <b>$" .. money .. " dólares</b> pelo saco de lixo.")
 	end
 end

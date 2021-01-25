@@ -15,4 +15,14 @@ cfg = {
 		"trash",
 		"trash2",
 	},
+	
+	
+	blipCoords = {
+		x = -349.84,
+		y = -1569.79,
+		z = 25.22
+	},
+	
+	minMoneyValue = 100,
+	maxMoneyValue = 290,
 }

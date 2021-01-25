@@ -10,12 +10,15 @@ local blips = nil
 local garbageBag = nil
 local truck = nil
 
+local lastDist = 1000
+local lastBinBagPos = {}
+local lastBinBag = nil
 
-local blipCoords = {
-	x = -349.84,
-	y = -1569.79,
-	z = 25.22
-}
+local blipCoords = cfg.blipCoords
+
+RegisterCommand("cancelandoFalse", function(source, args, rawCommand)
+	TriggerEvent("cancelando", false)
+end)
 
 -- ENTRAR EM SERVIÇO
 Citizen.CreateThread(function()
@@ -49,7 +52,7 @@ Citizen.CreateThread(function()
 			Citizen.Wait(20)
 			if IsControlJustPressed(0,168) then
 				RemoveBlip(blips)
-				DeleteEntity(garbagebag)
+				DeleteEntity(garbageBag)
 				
 				trabalhando = false
 				
@@ -79,53 +82,52 @@ Citizen.CreateThread(function()
 				local pos = GetEntityCoords(ped)
 				local proximo = false
 
-				for _, model in ipairs(cfg.binbagsModels) do
-					local pos = GetEntityCoords(GetPlayerPed(-1))
-					local binBag = GetClosestObjectOfType(pos.x, pos.y, pos.z, 1.0, model, false, false, false)
-					local binBagPos = GetEntityCoords(binBag)
-					local dist = GetDistanceBetweenCoords(pos.x, pos.y, pos.z, binBagPos.x, binBagPos.y, binBagPos.z, true)
+				
 
-					if dist < 1.3 then
-						-- DrawTxtabcdefg("[~r~E~w~] RECOLHER LIXO", 4, 0.5, 0.93, 0.50, 255, 255, 255, 180)
-						Draw3DText("[~r~E~w~] RECOLHER LIXO", binBagPos)
+				if lastDist < 1.3 then
+					-- DrawTxtabcdefg("[~r~E~w~] RECOLHER LIXO", 4, 0.5, 0.93, 0.50, 255, 255, 255, 180)
+					Draw3DText("[~r~E~w~] RECOLHER LIXO", lastBinBagPos.x, lastBinBagPos.y, lastBinBagPos.z)
+					proximo = true
+					if IsControlJustReleased(0, 38) then
+						if not IsAnimated then
+							IsAnimated = true
 
-						proximo = true
-						if IsControlJustReleased(0, 38) then
-							if not IsAnimated then
-								IsAnimated = true
+							vRP.playAnim(true,{{"pickup_object","pickup_low"}},false)
 
-								vRP.playAnim(true,{{"pickup_object","pickup_low"}},false)
-
-								Citizen.Wait(GetAnimDuration("pickup_object","pickup_low") * 1000)
-								Citizen.CreateThread(function()
-									local playerPed = PlayerPedId()
-									local x, y, z = table.unpack(GetEntityCoords(playerPed))
+							Citizen.Wait(GetAnimDuration("pickup_object","pickup_low") * 1000 / 1.5)
+							Citizen.CreateThread(function()
+								local playerPed = PlayerPedId()
+								local x, y, z = table.unpack(GetEntityCoords(playerPed))
+								
+								while garbageBag do
+									SetModelAsNoLongerNeeded(garbageBag)
+									SetEntityAsMissionEntity(garbageBag, false, false)
+									DeleteObject(garbageBag)
+									garbageBag = nil
+								end
 									
-									while garbageBag do
-										if DoesEntityExist(garbageBag) then
-											DeleteEntity(garbagebag)
-										else
-											garbageBag = nil
-										end
-									end
+								while not HasAnimDictLoaded("anim@heists@narcotics@trash") do
+									RequestAnimDict("anim@heists@narcotics@trash")
+									Citizen.Wait(5)
+								end
 									
-									while not HasAnimDictLoaded("anim@heists@narcotics@trash") do
-										RequestAnimDict("anim@heists@narcotics@trash")
-										Citizen.Wait(5)
-									end
-									
-									garbagebag = CreateObject(GetHashKey("prop_cs_street_binbag_01"), 0, 0, 0, true, true, true)
-									AttachEntityToEntity(garbagebag, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 57005), 0.4, 0, 0, 0, 270.0, 60.0, true, true, false, true, 1, true)
+								garbageBag = CreateObject(GetHashKey("prop_cs_street_binbag_01"), 0, 0, 0, true, true, true)
+								AttachEntityToEntity(garbageBag, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 57005), 0.4, 0, 0, 0, 270.0, 60.0, true, true, false, true, 1, true)
 
-									TriggerEvent('cancelando', true)
-									ClearPedTasksImmediately(playerPed)
-									TaskPlayAnim(playerPed, 'anim@heists@narcotics@trash', 'walk', 1.0, -1.0,-1,49,0,0, 0,0)
+								-- TriggerEvent('cancelando', true)
+								ClearPedTasksImmediately(playerPed)
+								TaskPlayAnim(playerPed, 'anim@heists@narcotics@trash', 'walk', 1.0, -1.0,-1,49,0,0, 0,0)
 									
-									IsSegurando = true
-								end)
-							end
+								IsSegurando = true
+								
+								SetModelAsNoLongerNeeded(lastBinBag)
+								SetEntityAsMissionEntity(lastBinBag, false, false)
+								DeleteObject(lastBinBag)
+							end)
 						end
 					end
+						-- break
+					-- end
 				end
 
 
@@ -133,10 +135,11 @@ Citizen.CreateThread(function()
 					Citizen.Wait(1500)
 				end
 			elseif IsAnimated and IsSegurando then
-				local trunk = GetWorldPositionOfEntityBone(work_truck, GetEntityBoneIndexByName(work_truck, "platelight"))
+				local trunk = GetWorldPositionOfEntityBone(truck, GetEntityBoneIndexByName(truck, "platelight"))
  				local plyCoords = GetEntityCoords(GetPlayerPed(-1), false)
 				local dist = Vdist(plyCoords.x, plyCoords.y, plyCoords.z, trunk.x, trunk.y, trunk.z)
-				if dist <= 2.0 then
+				if dist <= 1.3 then
+					Draw3DText("[~g~E~w~] JOGAR LIXO", trunk.x, trunk.y, trunk.z + 0.5)
 					if IsControlJustReleased(0, 38) then
 						jogarLixo()
 					end
@@ -153,30 +156,77 @@ end)
 Citizen.CreateThread(function()
 	while true do
 		if trabalhando then
-			Citizen.Wait(5000)
+			Citizen.Wait(2500)
 
+			local abc = {}
+			local distance = -1
 			for _, model in ipairs(cfg.binbagsModels) do
 				local pos = GetEntityCoords(GetPlayerPed(-1))
-				local binBag = GetClosestObjectOfType(pos.x, pos.y, pos.z, 1.0, model, false, false, false)
+				local binBag = GetClosestObjectOfType(pos.x, pos.y, pos.z, 100.0, model, false, false, false)
 				local binBagPos = GetEntityCoords(binBag)
-				if binBag then
-					CriandoBlip(binBagPos)
+				local plyCoords = GetEntityCoords(GetPlayerPed(-1), false)
+				local dist = Vdist(plyCoords.x, plyCoords.y, plyCoords.z, binBagPos.x, binBagPos.y, binBagPos.z)
+				if dist < distance or distance == -1 then
+					abc = binBagPos
+					distance = dist
+					-- print(dist .. " | " .. distance)
 				end
 			end
-
+			
+			CriandoBlip(abc.x, abc.y, abc.z)
+			
+			Citizen.Wait(2500)
 
 			local truckTemp = GetPlayersLastVehicle()
 			local isLegalVehicle = false
 					
 			for _, vehicleModel in ipairs(cfg.garbageTruckModels) do
-				if truckTemp == GetHashKey(vehicleModel) then
+				-- print(vehicleModel)
+				-- print(GetHashKey(vehicleModel))
+				if GetEntityModel(truckTemp) == GetHashKey(vehicleModel) then
 					isLegalVehicle = true
+					-- print("LegalVehicle")
 				end
 			end
 			
 			if isLegalVehicle then
 				truck = truckTemp
 			end
+			-- print(truck)
+			-- print(truckTemp)
+		else
+			Citizen.Wait(5000)
+		end
+	end
+end)
+
+Citizen.CreateThread(function()
+	while true do
+		if trabalhando then
+			local counter = 0
+			for _, model in ipairs(cfg.binbagsModels) do
+				local pos = GetEntityCoords(GetPlayerPed(-1))
+				local binBag = GetClosestObjectOfType(pos.x, pos.y, pos.z, 10.0, model, false, false, false)
+				local binBagPos = GetEntityCoords(binBag)
+				local dist = GetDistanceBetweenCoords(pos.x, pos.y, pos.z, binBagPos.x, binBagPos.y, binBagPos.z, true)
+			
+				if dist <= lastDist then
+					lastDist = dist
+					lastBinBagPos = binBagPos
+					lastBinBag = binBag
+				else
+					counter = counter + 1
+				end
+			end
+			
+			if counter >= #cfg.binbagsModels then
+				lastDist = 10
+			end
+			
+			Citizen.Wait(1500)
+		else
+			lastDist = 1000
+			Citizen.Wait(3000)
 		end
 	end
 end)
@@ -185,22 +235,27 @@ function jogarLixo()
 	IsAnimated = false
 	IsSegurando = false
 
-	TriggerEvent('cancelando', false)
+	-- TriggerEvent('cancelando', false)
 
 	while not HasAnimDictLoaded("anim@heists@narcotics@trash") do
 		RequestAnimDict("anim@heists@narcotics@trash")
 		Citizen.Wait(5)
 	end
 
+	SetVehicleDoorOpen(truck, 5, false, false)
+
+
 	ClearPedTasksImmediately(GetPlayerPed(-1))
 	TaskPlayAnim(PlayerPedId(-1), 'anim@heists@narcotics@trash', 'throw_b', 1.0, -1.0,-1,2,0,0, 0,0)
  	Citizen.Wait(800)
 	
-	DeleteEntity(garbagebag)
+	DeleteEntity(garbageBag)
 	heyyczer.checkPayment()
 	
 	Citizen.Wait(100)
 	ClearPedTasksImmediately(GetPlayerPed(-1))
+	
+	SetVehicleDoorShut(truck, 5, false, false)
 end
 
 
@@ -230,7 +285,7 @@ function DrawTxtabcdefg(text, font, x, y, scale, r, g, b, a)
     AddTextComponentString(text)
     DrawText(x, y)
 end
-function Draw3DText(x,y,z,text)
+function Draw3DText(text, x,y,z)
 	local onScreen,_x,_y = World3dToScreen2d(x,y,z)
 	SetTextFont(4)
 	SetTextScale(0.35,0.35)
