@@ -16,10 +16,6 @@ local lastBinBag = nil
 
 local blipCoords = cfg.blipCoords
 
-RegisterCommand("cancelandoFalse", function(source, args, rawCommand)
-	TriggerEvent("cancelando", false)
-end)
-
 -- ENTRAR EM SERVIÇO
 Citizen.CreateThread(function()
 	while true do
@@ -36,7 +32,7 @@ Citizen.CreateThread(function()
 					if IsControlJustPressed(0,38) then
 						trabalhando = true
 						
-						TriggerEvent("Notify", "sucesso", "Você entrou no serviço de Lixeiro. Para continuar realizar a coleta, se encaminhe para um <b>Saco de Lixo</b> próximo, estes são marcados em seu GPS com um <b>ponto amarelo</b>.")
+						TriggerEvent("Notify", "sucesso", "Você entrou no serviço de Lixeiro. Para continuar realizar a coleta, se encaminhe para um <b>Saco de Lixo</b> próximo, estes são marcados em seu GPS com um <b>ponto amarelo</b>.", 15000)
 					end
 				end
 			end
@@ -45,6 +41,7 @@ Citizen.CreateThread(function()
 		end
 	end
 end)
+
 -- FINALIZAR SERVIÇO
 Citizen.CreateThread(function()
 	while true do
@@ -62,14 +59,13 @@ Citizen.CreateThread(function()
 				truck = nil
 				garbageBag = nil
 				blips = nil
+				TriggerEvent("Notify", "aviso", "Você saiu de serviço com sucesso!", 6000)
 			end
 		else
 			Citizen.Wait(5000)
 		end
 	end
 end)
-
-
 
 -- TRABALHAR
 Citizen.CreateThread(function()
@@ -82,10 +78,7 @@ Citizen.CreateThread(function()
 				local pos = GetEntityCoords(ped)
 				local proximo = false
 
-				
-
-				if lastDist < 1.3 then
-					-- DrawTxtabcdefg("[~r~E~w~] RECOLHER LIXO", 4, 0.5, 0.93, 0.50, 255, 255, 255, 180)
+				if lastDist < 1.5 then
 					Draw3DText("[~r~E~w~] RECOLHER LIXO", lastBinBagPos.x, lastBinBagPos.y, lastBinBagPos.z)
 					proximo = true
 					if IsControlJustReleased(0, 38) then
@@ -114,7 +107,6 @@ Citizen.CreateThread(function()
 								garbageBag = CreateObject(GetHashKey("prop_cs_street_binbag_01"), 0, 0, 0, true, true, true)
 								AttachEntityToEntity(garbageBag, GetPlayerPed(-1), GetPedBoneIndex(GetPlayerPed(-1), 57005), 0.4, 0, 0, 0, 270.0, 60.0, true, true, false, true, 1, true)
 
-								-- TriggerEvent('cancelando', true)
 								ClearPedTasksImmediately(playerPed)
 								TaskPlayAnim(playerPed, 'anim@heists@narcotics@trash', 'walk', 1.0, -1.0,-1,49,0,0, 0,0)
 									
@@ -126,10 +118,7 @@ Citizen.CreateThread(function()
 							end)
 						end
 					end
-						-- break
-					-- end
 				end
-
 
 				if not proximo then
 					Citizen.Wait(1500)
@@ -169,11 +158,10 @@ Citizen.CreateThread(function()
 				if dist < distance or distance == -1 then
 					abc = binBagPos
 					distance = dist
-					-- print(dist .. " | " .. distance)
 				end
 			end
 			
-			CriandoBlip(abc.x, abc.y, abc.z)
+			if cfg.marcarGPS then CriandoBlip(abc.x, abc.y, abc.z) end
 			
 			Citizen.Wait(2500)
 
@@ -181,19 +169,14 @@ Citizen.CreateThread(function()
 			local isLegalVehicle = false
 					
 			for _, vehicleModel in ipairs(cfg.garbageTruckModels) do
-				-- print(vehicleModel)
-				-- print(GetHashKey(vehicleModel))
 				if GetEntityModel(truckTemp) == GetHashKey(vehicleModel) then
 					isLegalVehicle = true
-					-- print("LegalVehicle")
 				end
 			end
 			
 			if isLegalVehicle then
 				truck = truckTemp
 			end
-			-- print(truck)
-			-- print(truckTemp)
 		else
 			Citizen.Wait(5000)
 		end
@@ -235,8 +218,6 @@ function jogarLixo()
 	IsAnimated = false
 	IsSegurando = false
 
-	-- TriggerEvent('cancelando', false)
-
 	while not HasAnimDictLoaded("anim@heists@narcotics@trash") do
 		RequestAnimDict("anim@heists@narcotics@trash")
 		Citizen.Wait(5)
@@ -264,7 +245,6 @@ function CriandoBlip(x, y, z)
 	if blips and DoesBlipExist(blips) then
 		RemoveBlip(blips)
 	end
-	
 	blips = AddBlipForCoord(x, y, z)
 	SetBlipSprite(blips, 1)
 	SetBlipColour(blips, 5)

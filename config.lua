@@ -1,5 +1,5 @@
 cfg = {
-	binbagsModels = {
+	binbagsModels = { -- "PROPS" de sacos de lixo que serão utilizados
 		"prop_rub_binbag_sd_01",
 		"prop_rub_binbag_sd_02",
 		"prop_rub_binbag_01",
@@ -11,18 +11,20 @@ cfg = {
 		"prop_rub_binbag_06",
 		"prop_rub_binbag_08",
 	},
-	garbageTruckModels = {
+	
+	garbageTruckModels = { -- Veículos autorizados para realização do trabalho
 		"trash",
 		"trash2",
 	},
 	
-	
-	blipCoords = {
+	blipCoords = { -- Marcador do início do trabalho
 		x = -349.84,
 		y = -1569.79,
-		z = 25.22
+		z = 25.22,
 	},
 	
-	minMoneyValue = 100,
-	maxMoneyValue = 290,
+	minMoneyValue = 100, -- Mínimo de dinheiro que o jogador irá receber ao jogar um saco de lixo no caminhão
+	maxMoneyValue = 290, -- Máximo de dinheiro que o jogador irá receber ao jogar um saco de lixo no caminhão
+	
+	marcarGPS = true, -- Se deverá marcar ou não sacos de lixo próximo
 }

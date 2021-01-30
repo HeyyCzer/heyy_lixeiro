@@ -8,7 +8,6 @@ Tunnel.bindInterface("emp_lixeiro", heyyczer)
 function heyyczer.checkPayment()
     local source = source
     local user_id = vRP.getUserId(source)
-	
 	if user_id then
 		local money = math.random(cfg.minMoneyValue, cfg.maxMoneyValue)
 		
